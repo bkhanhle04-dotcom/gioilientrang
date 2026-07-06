@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vòng Lặp Song Sinh — Zenlish</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary: #0037f4;
+    --accent: #ff7900;
+    --ink: #0E1420;
+    --panel: #161E30;
+    --panel-2: #1D273C;
+    --line: rgba(255,255,255,0.08);
+    --text: #EDEFF5;
+    --muted: #8B93A7;
+    --prep: #2FD9C4;
+    --conj: #F4A340;
+    --adv: #B98CE0;
+    --pair: #6FA8FF;
+    --bad: #F2617A;
+    --good: #57D68D;
+    --shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: radial-gradient(1200px 600px at 15% -10%, rgba(0,55,244,0.15), transparent 60%),
+                radial-gradient(1000px 500px at 100% 0%, rgba(255,121,0,0.10), transparent 55%),
+                var(--ink);
+    color:var(--text); font-family:'IBM Plex Sans', sans-serif; min-height:100vh;
+  }
+  .wrap{max-width:920px; margin:0 auto; padding:28px 20px 80px;}
+  h1,h2,h3{font-family:'Space Grotesk', sans-serif; letter-spacing:-0.01em; margin:0;}
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted);
+  }
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--primary);}
+
+  .topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:26px; gap:12px; flex-wrap:wrap;}
+  .brand{display:flex; flex-direction:column; gap:4px;}
+  .brand h1{font-size:20px;}
+  .brand .eyebrow .dot {background: var(--accent);}
+  
+  .progress-pill{
+    font-family:'IBM Plex Mono', monospace; font-size:13px; color:var(--muted);
+    background:var(--panel); border:1px solid var(--line); padding:6px 14px; border-radius:999px;
+  }
+  .progress-track{height:4px; width:100%; background:var(--panel); border-radius:4px; overflow:hidden; margin-top:12px;}
+  .progress-fill{height:100%; background:linear-gradient(90deg, var(--primary), var(--accent)); transition:width .4s ease;}
+
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:26px; box-shadow:var(--shadow); margin-bottom:20px;
+  }
+  .center{text-align:center;}
+  .btn{
+    font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:15px;
+    background:var(--primary); color:#FFF; border:none; padding:13px 26px; border-radius:12px;
+    cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; box-shadow:0 6px 18px rgba(0,55,244,0.3);
+  }
+  .btn:hover{transform:translateY(-1px); box-shadow:0 8px 22px rgba(0,55,244,0.4);}
+  .btn:disabled{opacity:0.35; cursor:not-allowed; transform:none;}
+  .btn.secondary{background:transparent; color:var(--text); border:1px solid var(--line); box-shadow:none;}
+
+  .meaning-badge{display:inline-block; font-size:26px; font-weight:700; padding:4px 0 18px; color:var(--text);}
+  .meaning-badge span{color:var(--accent);}
+  .tray{display:flex; flex-wrap:wrap; gap:10px; margin-bottom:22px; min-height:52px;}
+  .card-word{
+    font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:14.5px;
+    background:var(--panel-2); border:1px solid var(--line); padding:10px 16px; border-radius:10px; cursor:pointer;
+    transition: all .15s ease; user-select:none;
+  }
+  .card-word:hover{border-color:var(--primary);}
+  .card-word.selected{border-color:var(--primary); background:rgba(0,55,244,0.12); box-shadow:0 0 0 1px var(--primary) inset;}
+  .card-word.placed{opacity:0.25; cursor:default; pointer-events:none;}
+  .card-word.locked{border-color:var(--bad) !important; color:var(--bad); pointer-events:none; background:rgba(242,97,122,0.1);}
+  .card-word.shake{animation:shake .32s;}
+  @keyframes shake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
+
+  .boxes{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px;}
+  .box{
+    border:1.5px dashed var(--line); border-radius:14px; padding:14px; min-height:110px; transition:all .15s ease; cursor:pointer; display:flex; flex-direction:column; gap:8px;
+  }
+  .box:hover{border-color:var(--muted);}
+  .box.flash-good{border-color:var(--good); background:rgba(87,214,141,0.08);}
+  .box .box-title{font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; font-weight:600;}
+  .box.prep .box-title{color:var(--prep);} .box.conj .box-title{color:var(--conj);} .box.adv .box-title{color:var(--adv);} .box.pair .box-title{color:var(--pair);}
+  .box-sub{font-size:12px; color:var(--muted);}
+  .box-slot{background:var(--panel); border-radius:8px; padding:8px 10px; font-size:13.5px; font-weight:600;}
+  .box.prep .box-slot{color:var(--prep); border:1px solid rgba(47,217,196,0.35);}
+  .box.conj .box-slot{color:var(--conj); border:1px solid rgba(244,163,64,0.35);}
+  .box.adv .box-slot{color:var(--adv); border:1px solid rgba(185,140,224,0.35);}
+  .box.pair .box-slot{color:var(--pair); border:1px solid rgba(111,168,255,0.35);}
+
+  .sentence-block{margin-top:8px;}
+  .vi-line{color:var(--muted); font-size:14px; margin-bottom:6px;}
+  .en-line{font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:600; margin-bottom:18px; line-height:1.5;}
+  .en-line .blank{color:var(--accent); border-bottom:2px solid var(--accent); padding:0 12px; display:inline-block; min-width:40px; text-align:center;}
+  .opt-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px;}
+  .opt-btn{
+    font-family:'IBM Plex Sans',sans-serif; font-weight:500; font-size:14.5px;
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:12px 14px; border-radius:10px; cursor:pointer; text-align:left; transition:all .15s ease;
+  }
+  .opt-btn:hover:not(:disabled){border-color:var(--primary);}
+  .opt-btn.correct{border-color:var(--good); background:rgba(87,214,141,0.12); color:var(--good);}
+  .opt-btn.wrong{border-color:var(--bad); background:rgba(242,97,122,0.12); color:var(--bad);}
+  .opt-btn:disabled{cursor:default;}
+  .feedback-line{margin-top:14px; font-size:14.5px; color:var(--text); min-height:20px; font-weight:400; line-height:1.5; padding:12px; border-radius:8px; background:var(--panel-2); display:none;}
+  .feedback-line.show{display:block;}
+
+  .timer-track{height:6px; width:100%; background:var(--panel-2); border-radius:6px; overflow:hidden; margin-bottom:20px;}
+  .timer-fill{height:100%; background:var(--accent); width:100%; transform-origin:left;}
+  .reflex-q-type{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted); margin-bottom:10px; letter-spacing:0.06em;}
+  .reflex-prompt{font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; margin-bottom:20px;}
+
+  .axis-row{margin-bottom:22px;}
+  .axis-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .axis-name{font-weight:600; font-size:14.5px;}
+  .axis-val{font-family:'IBM Plex Mono',monospace; font-size:13px;}
+  .axis-track{height:10px; border-radius:6px; background:var(--panel-2); overflow:hidden;}
+  .axis-fill{height:100%; border-radius:6px;}
+  .tag-pass{background:rgba(87,214,141,0.15); color:var(--good); border:1px solid rgba(87,214,141,0.4); font-size:11px; padding:2px 8px; border-radius:999px; font-family:'IBM Plex Mono',monospace;}
+  .tag-fail{background:rgba(242,97,122,0.15); color:var(--bad); border:1px solid rgba(242,97,122,0.4); font-size:11px; padding:2px 8px; border-radius:999px; font-family:'IBM Plex Mono',monospace;}
+  .review-list{margin-top:6px; font-size:14px; color:var(--muted); line-height:1.7;}
+
+  #certCanvas{width:100%; max-width:700px; border-radius:14px; box-shadow:var(--shadow); border:1px solid var(--line);}
+  input.name-input{
+    font-family:'Space Grotesk',sans-serif; font-size:16px; padding:12px 16px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); color:var(--text); width:100%; max-width:340px; margin:0 auto 16px; display:block;
+  }
+  .hidden{display:none !important;}
+  .row-gap{display:flex; gap:12px; flex-wrap:wrap; justify-content:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <span class="eyebrow"><span class="dot"></span>ZENLISH - HỌC TOEIC 1 LẦN LÀ ĐẠT</span>
+      <h1>Vòng Lặp Song Sinh</h1>
+    </div>
+    <div id="progressPill" class="progress-pill">Sẵn sàng</div>
+  </div>
+  <div class="progress-track"><div id="progressFill" class="progress-fill" style="width:0%"></div></div>
+
+  <div id="screen-intro" class="panel">
+    <span class="eyebrow"><span class="dot" style="background:var(--accent)"></span>Trước khi bắt đầu</span>
+    <h2 style="font-size:24px; margin-top:10px;">Bẻ gãy bẫy song sinh: cùng nghĩa, khác cấu trúc</h2>
+    <p style="color:var(--muted); line-height:1.7; margin-top:10px;">
+      Mỗi cụm nghĩa có nhiều từ cùng nghĩa nhưng khác cấu trúc.
+      Chạy qua <b style="color:var(--text)">12 cụm nghĩa trọng điểm</b>: xếp từ đúng khay, sau đó áp dụng vào câu. 
+      Kết thúc bằng <b style="color:var(--text)">Vòng Phản Xạ 20 câu</b>, 5 giây/câu.
+    </p>
+    <div class="row-gap" style="margin-top:8px; text-align:left; color:var(--muted); font-size:13px;">
+      <div class="panel" style="flex:1; min-width:220px; padding:16px; margin:0;">
+        <div style="color:var(--prep); font-family:'IBM Plex Mono',monospace; font-size:11.5px; margin-bottom:6px;">GIỚI TỪ</div>
+        + N / V-ing
+      </div>
+      <div class="panel" style="flex:1; min-width:220px; padding:16px; margin:0;">
+        <div style="color:var(--conj); font-family:'IBM Plex Mono',monospace; font-size:11.5px; margin-bottom:6px;">LIÊN TỪ</div>
+        + Mệnh đề (S + V)
+      </div>
+      <div class="panel" style="flex:1; min-width:220px; padding:16px; margin:0;">
+        <div style="color:var(--adv); font-family:'IBM Plex Mono',monospace; font-size:11.5px; margin-bottom:6px;">TRẠNG TỪ LIÊN KẾT</div>
+        Đứng đầu câu, có dấu phẩy
+      </div>
+    </div>
+    <div class="center" style="margin-top:26px;">
+      <button class="btn" onclick="startGame()">Bắt đầu ngay</button>
+    </div>
+  </div>
+
+  <div id="screen-group" class="panel hidden">
+    <span class="eyebrow" id="groupEyebrow"><span class="dot"></span>Bước 1 · Snap Sort</span>
+    <div class="meaning-badge" id="meaningBadge"></div>
+
+    <div id="step1">
+      <div class="tray" id="tray"></div>
+      <div class="boxes" id="boxes"></div>
+    </div>
+
+    <div id="step2" class="hidden sentence-block">
+      <div class="vi-line" id="viLine"></div>
+      <div class="en-line" id="enLine"></div>
+      <div class="opt-grid" id="optGrid"></div>
+      <div class="feedback-line" id="sentFeedback"></div>
+      <div class="center" style="margin-top:16px;">
+        <button class="btn hidden" id="nextGroupBtn" onclick="nextGroup()">Cụm tiếp theo →</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-transition" class="panel hidden center">
+    <span class="eyebrow"><span class="dot" style="background:var(--accent)"></span>Đã xong 12 cụm nghĩa</span>
+    <h2 style="font-size:22px; margin:10px 0;">Vòng Phản Xạ — 20 câu, 5 giây/câu</h2>
+    <p style="color:var(--muted); margin-top:8px; line-height:1.7;">70% Cấu trúc - 30% Nghĩa.<br/>Câu sai hoặc hết giờ trò chơi sẽ dừng lại chờ bạn chọn đáp án đúng.</p>
+    <button class="btn" style="margin-top:16px;" onclick="startReflex()">Vào vòng phản xạ</button>
+  </div>
+
+  <div id="screen-reflex" class="panel hidden">
+    <span class="eyebrow"><span class="dot" style="background:var(--bad)"></span><span id="reflexCounter">Câu 1/20</span></span>
+    <div class="timer-track" style="margin-top:14px;"><div class="timer-fill" id="timerFill"></div></div>
+    <div class="reflex-q-type" id="reflexQType"></div>
+    <div class="reflex-prompt" id="reflexPrompt"></div>
+    <div class="opt-grid" id="reflexOptGrid"></div>
+  </div>
+
+  <div id="screen-results" class="panel hidden">
+    <span class="eyebrow"><span class="dot"></span>Kết quả 3 trục</span>
+    <h2 style="font-size:22px; margin:10px 0 22px;">Bảng chấm điểm</h2>
+    <div class="axis-row"><div class="axis-head"><span class="axis-name">Structure Mastery <span style="color:var(--muted); font-weight:400;">(≥95%)</span></span><span class="axis-val" id="structVal"></span></div><div class="axis-track"><div class="axis-fill" id="structFill" style="background:var(--primary);"></div></div></div>
+    <div class="axis-row"><div class="axis-head"><span class="axis-name">Semantic Mastery <span style="color:var(--muted); font-weight:400;">(≥90%)</span></span><span class="axis-val" id="semVal"></span></div><div class="axis-track"><div class="axis-fill" id="semFill" style="background:var(--accent);"></div></div></div>
+    <div class="axis-row"><div class="axis-head"><span class="axis-name">Speed Mastery <span style="color:var(--muted); font-weight:400;">(FAA≥80% & TB≤5s)</span></span><span class="axis-val" id="speedVal"></span></div><div class="axis-track"><div class="axis-fill" id="speedFill" style="background:var(--conj);"></div></div></div>
+    <div id="gateVerdict" style="margin-top:24px;"></div>
+    <div id="reviewBlock" class="review-list hidden"></div>
+    <div class="row-gap" style="margin-top:24px;">
+      <button class="btn secondary" onclick="location.reload()">Chơi lại từ đầu</button>
+      <button class="btn hidden" id="certifyBtn" onclick="showCertForm()">Nhận chứng chỉ →</button>
+    </div>
+  </div>
+
+  <div id="screen-cert" class="panel hidden center">
+    <span class="eyebrow"><span class="dot" style="background:var(--good)"></span>Đạt cả 3 trục</span>
+    <h2 style="font-size:22px; margin:10px 0 18px;">Nhập tên để in chứng chỉ</h2>
+    <input class="name-input" id="nameInput" placeholder="Họ và tên học viên" />
+    <button class="btn" onclick="renderCertificate()">Tạo chứng chỉ</button>
+    <div id="certWrap" style="margin-top:22px;"></div>
+    <a id="downloadLink" class="hidden" download="chung-chi-zenlish.png"><button class="btn secondary" style="margin-top:14px;">Tải chứng chỉ (PNG)</button></a>
+  </div>
+
+</div>
+
+<script>
+const GROUPS = [
+  { id:'A', meaning:'MẶC DÙ',
+    words:[
+      {text:'Although / Though', type:'conj'}, {text:'Despite / In spite of', type:'prep'},
+      {text:'Notwithstanding', type:'prep'}, {text:'However', type:'adv'}
+    ],
+    sentence:{
+      vi:'Mặc dù bị chỉ trích nặng nề, công ty vẫn giữ nguyên quyết định.',
+      en:'<span class="blank">___</span> heavy criticism, the company kept its decision unchanged.',
+      correct:'Despite / In spite of / Notwithstanding',
+      options:['Despite / In spite of / Notwithstanding','Although / Though','However'],
+      exp:'<b>heavy criticism</b> là một Cụm Danh Từ ➔ Cần điền một <b>Giới từ</b>.<br><i>Although</i> đi với Mệnh đề, <i>However</i> là Trạng từ liên kết đứng sau dấu phẩy/chấm.'
+    }
+  },
+  { id:'B', meaning:'BỞI VÌ',
+    words:[
+      {text:'Because / As / Since', type:'conj'}, {text:'Because of / Due to', type:'prep'},
+      {text:'Thanks to', type:'prep'}, {text:'Owing to', type:'prep'}, {text:'In light of', type:'prep'}
+    ],
+    sentence:{
+      vi:'Xét theo những phát hiện gần đây, ủy ban đã sửa đổi chính sách.',
+      en:'<span class="blank">___</span> recent findings, the committee revised its policy.',
+      correct:'In light of / Because of / Due to / Thanks to',
+      options:['In light of / Because of / Due to / Thanks to','Because / As / Since','Therefore'],
+      exp:'<b>recent findings</b> là Cụm Danh Từ ➔ Cần <b>Giới từ</b>.<br><i>Because/As/Since</i> cần đi với Mệnh đề (S + V).'
+    }
+  },
+  { id:'B2', meaning:'XÉT ĐẾN / XÉT THẤY',
+    words:[ {text:'Considering', type:'prep'}, {text:'Given', type:'prep'}, {text:'Given that', type:'conj'} ],
+    sentence:{
+      vi:'Xét thấy rằng anh ấy còn khá mới, kết quả của anh ấy khá ấn tượng.',
+      en:'<span class="blank">___</span> he is still new, his results are quite impressive.',
+      correct:'Given that',
+      options:['Given that','Considering / Given'],
+      exp:'<b>he is still new</b> là một Mệnh đề (S + V) ➔ Cần điền một <b>Liên từ</b> là <i>Given that</i>.<br><i>Considering / Given</i> là Giới từ chỉ đi với N/V-ing.'
+    }
+  },
+  { id:'C', meaning:'THAY VÌ',
+    words:[ {text:'Instead of', type:'prep'}, {text:'Rather than', type:'dual'} ],
+    sentence:{
+      vi:'Thay vì phàn nàn, cô ấy chọn cách hành động.',
+      en:'<span class="blank">___</span> complaining, she chose to take action.',
+      correct:'Instead of / Rather than',
+      options:['Instead of / Rather than','Otherwise'],
+      exp:'<b>complaining</b> là V-ing ➔ Cần <b>Giới từ</b> hoặc dạng <b>Dual</b>. <br><i>Otherwise</i> là trạng từ liên kết (nếu không thì).'
+    }
+  },
+  { id:'D', meaning:'THỜI GIAN',
+    words:[
+      {text:'Before', type:'dual'}, {text:'After', type:'dual'}, {text:'During', type:'prep'},
+      {text:'While', type:'conj'}, {text:'Since (mốc)', type:'dual'}, {text:'Until / Till', type:'dual'},
+      {text:'By', type:'prep'}, {text:'Within', type:'prep'}
+    ],
+    sentence:{
+      vi:'Trong suốt buổi họp, không ai được phép dùng điện thoại.',
+      en:'<span class="blank">___</span> the meeting, no one is allowed to use their phone.',
+      correct:'During',
+      options:['During','While','Since'],
+      exp:'<b>the meeting</b> là Cụm Danh Từ chỉ một sự kiện ➔ Cần <b>Giới từ</b> <i>During</i>.<br><i>While</i> là Liên từ đi kèm mệnh đề.'
+    }
+  },
+  { id:'E', meaning:'ĐIỀU KIỆN',
+    words:[ {text:'If', type:'conj'}, {text:'Unless', type:'conj'}, {text:'As long as', type:'conj'}, {text:'In case', type:'conj'} ],
+    sentence:{
+      vi:'Trừ khi trời mưa, chúng ta sẽ đi cắm trại.',
+      en:'<span class="blank">___</span> it rains, we will go camping.',
+      correct:'Unless',
+      options:['Unless','If','In case'],
+      exp:'Dựa vào ngữ cảnh (đi cắm trại - trời mưa) ➔ Cần nghĩa phủ định <b>Trừ khi</b> (Unless).'
+    }
+  },
+  { id:'F', meaning:'VỊ TRÍ / CÁCH THỨC',
+    words:[
+      {text:'In front of', type:'prep'}, {text:'Behind', type:'prep'}, {text:'Among', type:'prep'},
+      {text:'Through', type:'prep'}, {text:'Throughout', type:'prep'}, {text:'Toward', type:'prep'},
+      {text:'Into', type:'prep'}, {text:'By means of', type:'prep'}
+    ],
+    sentence:{
+      vi:'Vấn đề đã được giải quyết thông qua thương lượng trực tiếp.',
+      en:'The issue was resolved <span class="blank">___</span> direct negotiation.',
+      correct:'By means of / Through',
+      options:['By means of / Through','Among','Toward'],
+      exp:'<b>direct negotiation</b> (thương lượng trực tiếp) là phương pháp ➔ Dùng <i>Through / By means of</i>.'
+    }
+  },
+  { id:'G', meaning:'NGUYÊN NHÂN — KẾT QUẢ',
+    words:[ {text:'Therefore', type:'adv'}, {text:'As a result', type:'adv'}, {text:'Consequently', type:'adv'}, {text:'Otherwise', type:'adv'} ],
+    sentence:{
+      vi:'Anh ấy không nộp bài đúng hạn; do đó, anh ấy bị trừ điểm.',
+      en:'He did not submit on time; <span class="blank">___</span>, he lost points.',
+      correct:'Therefore / As a result / Consequently',
+      options:['Therefore / As a result / Consequently','Otherwise','Because'],
+      exp:'Vị trí nằm sau dấu <b>chấm phẩy (;)</b> và trước dấu <b>phẩy (,)</b> ➔ Bắt buộc dùng <b>Trạng từ liên kết</b>.'
+    }
+  },
+  { id:'H', meaning:'TƯƠNG PHẢN',
+    words:[ {text:'Nevertheless', type:'adv'}, {text:'On the other hand', type:'adv'}, {text:'In contrast', type:'adv'} ],
+    sentence:{
+      vi:'Doanh số giảm mạnh; tuy nhiên, lợi nhuận vẫn tăng.',
+      en:'Sales dropped sharply; <span class="blank">___</span>, profit still increased.',
+      correct:'Nevertheless',
+      options:['Nevertheless','Although','On the other hand'],
+      exp:'Ngữ cảnh tương phản bất ngờ ➔ <i>Nevertheless (tuy nhiên)</i>.<br><i>Although</i> là liên từ không đứng độc lập giữa dấu ; và dấu ,.'
+    }
+  },
+  { id:'I', meaning:'BỔ SUNG',
+    words:[ {text:'Moreover', type:'adv'}, {text:'Furthermore', type:'adv'}, {text:'In addition', type:'adv'}, {text:'Besides', type:'adv'} ],
+    sentence:{
+      vi:'Sản phẩm rẻ hơn; hơn nữa, chất lượng cũng tốt hơn.',
+      en:'The product is cheaper; <span class="blank">___</span>, the quality is better too.',
+      correct:'Moreover / Furthermore / In addition',
+      options:['Moreover / Furthermore / In addition','Therefore','Besides'],
+      exp:'Hai mệnh đề cùng chiều tích cực (rẻ - tốt) ➔ Dùng trạng từ <b>Bổ sung</b>.'
+    }
+  },
+  { id:'K', meaning:'CẶP LIÊN TỪ TƯƠNG QUAN',
+    words:[
+      {text:'Not only ... but also', type:'pair'}, {text:'Both ... and', type:'pair'},
+      {text:'Either ... or', type:'pair'}, {text:'Neither ... nor', type:'pair'}
+    ],
+    sentence:{
+      vi:'Cô ấy không những thông minh mà còn chăm chỉ.',
+      en:'She is <span class="blank">___</span> smart <span class="blank">___</span> hardworking.',
+      correct:'Not only ... but also',
+      options:['Not only ... but also','Both ... and','Either ... or','Neither ... nor'],
+      exp:'Cấu trúc tịnh tiến nhấn mạnh <b>Không những... mà còn</b>.'
+    }
+  },
+  { id:'L', meaning:'CÒN LẠI QUAN TRỌNG',
+    words:[ {text:'Regarding / Concerning', type:'prep'}, {text:'Except', type:'prep'}, {text:'Whereas', type:'conj'} ],
+    sentence:{
+      vi:'Liên quan đến hợp đồng mới, chúng ta cần thêm thời gian.',
+      en:'<span class="blank">___</span> the new contract, we need more time.',
+      correct:'Regarding / Concerning',
+      options:['Regarding / Concerning','Except','Whereas'],
+      exp:'<i>Regarding/Concerning</i> là Giới từ mang nghĩa "Liên quan đến". <br><i>Whereas (trong khi đó)</i> là Liên từ.'
+    }
+  }
+];
+
+const BOX_META = {
+  prep:{title:'GIỚI TỪ', sub:'+ N / V-ing', cls:'prep'},
+  conj:{title:'LIÊN TỪ', sub:'+ Mệnh đề', cls:'conj'},
+  adv:{title:'TRẠNG TỪ LIÊN KẾT', sub:'. Adv, + MĐ', cls:'adv'},
+  pair:{title:'CẶP TƯƠNG QUAN', sub:'nối 2 thành phần', cls:'pair'}
+};
+
+let state = {
+  groupIdx:0, totalWords:0, cleanStructureCount:0, wrongWordsLog:[], semanticCleanCount:0, semanticWrongLog:[], currentGroupPlaced:0, cardDirty:{},
+  reflex:{ queue:[], baseTotal:20, faaCorrect:0, responseTimes:[], unresolved:[], currentQ:null, timerHandle:null, startTime:0 }
+};
+
+GROUPS.forEach(g=> state.totalWords += g.words.length);
+
+function show(id){
+  ['screen-intro','screen-group','screen-transition','screen-reflex','screen-results','screen-cert'].forEach(s=>{
+    document.getElementById(s).classList.toggle('hidden', s!==id);
+  });
+}
+function setProgress(label, pct){
+  document.getElementById('progressPill').textContent = label;
+  document.getElementById('progressFill').style.width = pct+'%';
+}
+
+function startGame(){ show('screen-group'); loadGroup(0); }
+
+function loadGroup(idx){
+  state.groupIdx = idx; state.currentGroupPlaced = 0; state.cardDirty = {}; const g = GROUPS[idx];
+  setProgress('Cụm '+(idx+1)+'/'+GROUPS.length, Math.round((idx)/GROUPS.length*70));
+
+  document.getElementById('groupEyebrow').innerHTML = '<span class="dot"></span>Bước 1 · Snap Sort — Cụm '+(idx+1)+'/'+GROUPS.length;
+  document.getElementById('meaningBadge').innerHTML = 'Nét nghĩa: <span>'+g.meaning+'</span>';
+
+  document.getElementById('step1').classList.remove('hidden'); document.getElementById('step2').classList.add('hidden');
+  document.getElementById('nextGroupBtn').classList.add('hidden'); document.getElementById('sentFeedback').classList.remove('show');
+
+  const tray = document.getElementById('tray'); tray.innerHTML='';
+  g.words.forEach((w,i)=>{
+    const el = document.createElement('div'); el.className='card-word'; el.textContent = w.text; el.dataset.idx = i;
+    el.onclick = ()=>selectCard(el,i); tray.appendChild(el);
+  });
+
+  const types = ['prep','conj','adv']; if(g.words.some(w=>w.type==='pair')) types.push('pair');
+  const boxesEl = document.getElementById('boxes'); boxesEl.innerHTML='';
+  types.forEach(t=>{
+    const meta = BOX_META[t]; const box = document.createElement('div'); box.className = 'box '+meta.cls; box.dataset.type = t;
+    box.innerHTML = '<div class="box-title">'+meta.title+'</div><div class="box-sub">'+meta.sub+'</div>';
+    box.onclick = ()=>attemptPlace(t, box); boxesEl.appendChild(box);
+  });
+  window._selectedCardIdx = null;
+}
+
+function selectCard(el, idx){
+  if(el.classList.contains('placed') || el.classList.contains('locked')) return;
+  document.querySelectorAll('.card-word').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected'); window._selectedCardIdx = idx;
+}
+
+function attemptPlace(boxType, boxEl){
+  const idx = window._selectedCardIdx; if(idx===null || idx===undefined) return;
+  const g = GROUPS[state.groupIdx]; const word = g.words[idx];
+  const isCorrect = (word.type===boxType) || (word.type==='dual' && (boxType==='prep'||boxType==='conj'));
+
+  if(isCorrect){
+    if(!state.cardDirty[idx]) state.cleanStructureCount++;
+    const cardEl = document.querySelector('.card-word[data-idx="'+idx+'"]');
+    cardEl.classList.remove('selected'); cardEl.classList.add('placed');
+    const slot = document.createElement('div'); slot.className='box-slot'; slot.textContent = word.text; boxEl.appendChild(slot);
+    boxEl.classList.add('flash-good'); setTimeout(()=>boxEl.classList.remove('flash-good'),350);
+    window._selectedCardIdx = null; state.currentGroupPlaced++;
+    if(state.currentGroupPlaced===g.words.length) setTimeout(()=>showSentenceStep(),350);
+  } else {
+    state.cardDirty[idx] = true; if(!state.wrongWordsLog.includes(word.text)) state.wrongWordsLog.push(word.text);
+    const cardEl = document.querySelector('.card-word[data-idx="'+idx+'"]');
+    cardEl.classList.add('shake', 'locked'); cardEl.classList.remove('selected'); window._selectedCardIdx = null;
+    setTimeout(()=> cardEl.classList.remove('shake', 'locked'), 1500);
+  }
+}
+
+function showSentenceStep(){
+  document.getElementById('groupEyebrow').innerHTML = '<span class="dot" style="background:var(--accent)"></span>Bước 2 · Instant Sentence — Cụm '+(state.groupIdx+1)+'/'+GROUPS.length;
+  document.getElementById('step1').classList.add('hidden'); document.getElementById('step2').classList.remove('hidden');
+
+  const g = GROUPS[state.groupIdx];
+  document.getElementById('viLine').textContent = g.sentence.vi; document.getElementById('enLine').innerHTML = g.sentence.en;
+  
+  const fb = document.getElementById('sentFeedback'); fb.classList.remove('show'); fb.innerHTML='';
+  document.getElementById('nextGroupBtn').classList.add('hidden');
+
+  const grid = document.getElementById('optGrid'); grid.innerHTML='';
+  let correctSelected = false; let firstAttempt = true;
+
+  g.sentence.options.sort(()=>Math.random()-0.5).forEach(optText=>{
+    const btn = document.createElement('button'); btn.className='opt-btn'; btn.textContent = optText;
+    btn.onclick = ()=>{
+      if(correctSelected || btn.classList.contains('wrong')) return;
+      
+      if(optText === g.sentence.correct){
+        btn.classList.add('correct'); correctSelected = true;
+        if(firstAttempt) state.semanticCleanCount++; else state.semanticWrongLog.push(g.meaning);
+        
+        fb.innerHTML = '<span style="color:var(--good); font-weight:700;">✓ Chính xác</span><br><br>' + g.sentence.exp;
+        fb.classList.add('show');
+        document.querySelectorAll('#optGrid .opt-btn').forEach(b=>b.disabled=true);
+        document.getElementById('nextGroupBtn').classList.remove('hidden');
+      } else {
+        btn.classList.add('wrong'); firstAttempt = false;
+        fb.innerHTML = '<span style="color:var(--bad); font-weight:700;">✗ Sai cấu trúc/ngữ cảnh.</span> Hãy phân tích lại và chọn đáp án khác để đi tiếp!';
+        fb.classList.add('show');
+      }
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function nextGroup(){
+  if(state.groupIdx+1 < GROUPS.length) loadGroup(state.groupIdx+1);
+  else { show('screen-transition'); setProgress('Chuẩn bị Vòng Phản Xạ', 72); }
+}
+
+function buildReflexPool(){
+  const structPool = []; const meanPool = [];
+  GROUPS.forEach(g=>{
+    g.words.forEach(w=>{
+      const correctTypes = w.type==='dual' ? ['prep','conj'] : [w.type];
+      const typeToLabel = {prep:'Giới từ (+N/V-ing)', conj:'Liên từ (+Mệnh đề)', adv:'Trạng từ liên kết', pair:'Cặp tương quan'};
+      structPool.push({
+        qtype:'CẤU TRÚC', prompt: w.text + ' đi với cấu trúc gì?',
+        options: ['Giới từ (+N/V-ing)','Liên từ (+Mệnh đề)','Trạng từ liên kết','Cặp tương quan'],
+        correct: correctTypes.map(t=>typeToLabel[t]), ref:w.text
+      });
+      const dist = GROUPS.filter(o=>o.id!==g.id).map(o=>o.meaning).sort(()=>Math.random()-0.5).slice(0,3);
+      meanPool.push({
+        qtype:'Ý NGHĨA', prompt: w.text + ' thuộc nét nghĩa nào?',
+        options: [g.meaning, ...dist].sort(()=>Math.random()-0.5), correct:[g.meaning], ref:w.text
+      });
+    });
+  });
+  structPool.sort(()=>Math.random()-0.5); meanPool.sort(()=>Math.random()-0.5);
+  return [...structPool.slice(0, 14), ...meanPool.slice(0, 6)].sort(()=>Math.random()-0.5);
+}
+
+function startReflex(){
+  show('screen-reflex');
+  state.reflex.queue = buildReflexPool().map(q=>({...q, requeueCount:0}));
+  state.reflex.baseTotal = state.reflex.queue.length; state.reflex.faaCorrect = 0; state.reflex.responseTimes = [];
+  state.reflex.shownCount = 0; nextReflexQuestion();
+}
+
+let reflexCorrectClicked = false;
+let reflexFirstAttempt = true;
+
+function nextReflexQuestion(){
+  if(state.reflex.queue.length===0){ finishGame(); return; }
+  const q = state.reflex.queue.shift(); state.reflex.currentQ = q; state.reflex.shownCount++;
+  reflexCorrectClicked = false; reflexFirstAttempt = true;
+
+  document.getElementById('reflexCounter').textContent = 'Câu '+Math.min(state.reflex.shownCount,999)+' · còn '+state.reflex.queue.length+' trong hàng đợi';
+  document.getElementById('reflexQType').textContent = q.qtype;
+  document.getElementById('reflexPrompt').innerHTML = q.prompt;
+
+  const grid = document.getElementById('reflexOptGrid'); grid.innerHTML='';
+  q.options.forEach(opt=>{
+    const btn = document.createElement('button'); btn.className='opt-btn'; btn.textContent = opt;
+    btn.onclick = ()=> handleReflexClick(btn, opt===q.correct[0] || q.correct.includes(opt));
+    grid.appendChild(btn);
+  });
+
+  state.reflex.startTime = Date.now(); runTimer();
+}
+
+function runTimer(){
+  clearTimeout(state.reflex.timerHandle);
+  const fill = document.getElementById('timerFill');
+  fill.style.transition='none'; fill.style.width='100%';
+  requestAnimationFrame(()=>{
+    fill.style.transition='width 5s linear'; fill.style.width='0%';
+  });
+  state.reflex.timerHandle = setTimeout(()=> handleReflexFail(true), 5000);
+}
+
+function handleReflexClick(btn, isCorrect){
+  if(reflexCorrectClicked || btn.classList.contains('wrong')) return;
+  clearTimeout(state.reflex.timerHandle);
+  document.getElementById('timerFill').style.width = document.getElementById('timerFill').getBoundingClientRect().width + 'px'; // freeze width
+
+  if(isCorrect){
+    btn.classList.add('correct'); reflexCorrectClicked = true;
+    if(reflexFirstAttempt){
+      state.reflex.faaCorrect++;
+      state.reflex.responseTimes.push(Math.min(Date.now()-state.reflex.startTime, 5000));
+    }
+    document.querySelectorAll('#reflexOptGrid .opt-btn').forEach(b=>b.disabled=true);
+    setTimeout(()=>nextReflexQuestion(), 800);
+  } else {
+    btn.classList.add('wrong');
+    handleReflexFail(false);
+  }
+}
+
+function handleReflexFail(isTimeout){
+  if(!reflexFirstAttempt) return; // Already failed this question
+  reflexFirstAttempt = false;
+  state.reflex.responseTimes.push(5000); // Penalty max time
+
+  const q = state.reflex.currentQ;
+  if(q.requeueCount < 2){
+    state.reflex.queue.splice(2,0,{...q, requeueCount:q.requeueCount+1});
+  } else {
+    state.reflex.unresolved.push(q.ref+' ('+q.qtype+')');
+  }
+
+  if(isTimeout) {
+     document.getElementById('reflexPrompt').innerHTML += '<br><span style="color:var(--bad); font-size:15px; font-weight:500;">Hết 5 giây! Hãy chọn đáp án đúng để đi tiếp.</span>';
+  } else {
+     document.getElementById('reflexPrompt').innerHTML += '<br><span style="color:var(--bad); font-size:15px; font-weight:500;">Sai rồi! Hãy chọn đáp án đúng để đi tiếp.</span>';
+  }
+}
+
+function finishGame(){
+  const structPct = state.cleanStructureCount / state.totalWords;
+  const semPct = state.semanticCleanCount / GROUPS.length;
+  const faaPct = state.reflex.faaCorrect / state.reflex.baseTotal;
+  const avgTime = state.reflex.responseTimes.reduce((a,b)=>a+b,0) / state.reflex.responseTimes.length;
+
+  const passStr = structPct>=0.95; const passSem = semPct>=0.90; const passSpd = faaPct>=0.80 && avgTime<=5000;
+  const allPass = passStr && passSem && passSpd;
+
+  show('screen-results'); setProgress('Hoàn thành', 100);
+
+  document.getElementById('structVal').innerHTML = Math.round(structPct*100)+'% '+(passStr?'<span class="tag-pass">ĐẠT</span>':'<span class="tag-fail">CHƯA ĐẠT</span>');
+  document.getElementById('structFill').style.width = Math.min(structPct*100,100)+'%';
+
+  document.getElementById('semVal').innerHTML = Math.round(semPct*100)+'% '+(passSem?'<span class="tag-pass">ĐẠT</span>':'<span class="tag-fail">CHƯA ĐẠT</span>');
+  document.getElementById('semFill').style.width = Math.min(semPct*100,100)+'%';
+
+  document.getElementById('speedVal').innerHTML = Math.round(faaPct*100)+'% · '+Math.round(avgTime)+'ms TB '+(passSpd?'<span class="tag-pass">ĐẠT</span>':'<span class="tag-fail">CHƯA ĐẠT</span>');
+  document.getElementById('speedFill').style.width = Math.min(faaPct*100,100)+'%';
+
+  const v = document.getElementById('gateVerdict'); const rb = document.getElementById('reviewBlock');
+  let items = [];
+  if(!passStr) items.push('<b>Cấu trúc còn sai:</b> '+(state.wrongWordsLog.slice(0,10).join(', ')||'—'));
+  if(!passSem) items.push('<b>Nghĩa còn nhầm ở cụm:</b> '+(state.semanticWrongLog.join(', ')||'—'));
+  if(!passSpd) items.push('<b>Phản xạ chưa đạt ở:</b> '+(state.reflex.unresolved.slice(0,10).join(', ')||'Tốc độ hoặc tỷ lệ đúng vòng 1 chưa đủ'));
+
+  if(allPass){
+    v.innerHTML = '<div style="font-family:\'Space Grotesk\',sans-serif; font-size:19px; color:var(--good); font-weight:700;">✓ Đạt cả 3 trục — đủ điều kiện cấp chứng chỉ.</div>';
+    document.getElementById('certifyBtn').classList.remove('hidden'); rb.classList.add('hidden');
+  } else {
+    v.innerHTML = '<div style="font-family:\'Space Grotesk\',sans-serif; font-size:19px; color:var(--bad); font-weight:700;">✗ Chưa đạt — cần đạt cả 3 trục mới được cấp chứng chỉ.</div>';
+    document.getElementById('certifyBtn').classList.add('hidden'); rb.innerHTML = items.map(i=>'<div>• '+i+'</div>').join(''); rb.classList.remove('hidden');
+  }
+}
+
+function showCertForm(){ show('screen-cert'); }
+function renderCertificate(){
+  const name = document.getElementById('nameInput').value.trim() || 'Học viên Zenlish';
+  const wrap = document.getElementById('certWrap');
+  wrap.innerHTML = '<canvas id="certCanvas" width="1400" height="900"></canvas>';
+  const ctx = document.getElementById('certCanvas').getContext('2d');
+
+  const grad = ctx.createLinearGradient(0,0,1400,900);
+  grad.addColorStop(0,'#0E1420'); grad.addColorStop(1,'#161E30');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,1400,900);
+
+  ctx.strokeStyle = '#0037f4'; ctx.lineWidth = 3; ctx.strokeRect(40,40,1320,820);
+  ctx.strokeStyle = 'rgba(255,121,0,0.5)'; ctx.lineWidth = 1; ctx.strokeRect(56,56,1288,788);
+
+  ctx.textAlign='center'; ctx.fillStyle='#8B93A7'; ctx.font='600 20px "IBM Plex Mono", monospace';
+  ctx.fillText('ZENLISH - HỌC TOEIC 1 LẦN LÀ ĐẠT', 700, 150);
+
+  ctx.fillStyle='#EDEFF5'; ctx.font='700 44px "Space Grotesk", sans-serif';
+  ctx.fillText('ÔN TẬP TOÀN BỘ GIỚI TỪ, LIÊN TỪ', 700, 230); ctx.fillText('VÀ TRẠNG TỪ LIÊN KẾT CORE', 700, 285);
+
+  ctx.fillStyle='#57D68D'; ctx.font='600 22px "IBM Plex Mono", monospace';
+  ctx.fillText('HOÀN THÀNH — ĐẠT CẢ 3 TRỤC CHẤM ĐIỂM', 700, 345);
+
+  ctx.fillStyle='#0037f4'; ctx.font='500 20px "IBM Plex Sans", sans-serif';
+  ctx.fillText('Chứng nhận trao cho', 700, 430);
+
+  ctx.fillStyle='#EDEFF5'; ctx.font='700 52px "Space Grotesk", sans-serif'; ctx.fillText(name, 700, 500);
+
+  const str = Math.round((state.cleanStructureCount/state.totalWords)*100);
+  const sem = Math.round((state.semanticCleanCount/GROUPS.length)*100);
+  const faa = Math.round((state.reflex.faaCorrect/state.reflex.baseTotal)*100);
+
+  ctx.font='500 18px "IBM Plex Mono", monospace'; ctx.fillStyle='#8B93A7';
+  ctx.fillText(`Structure ${str}%     ·     Semantic ${sem}%     ·     Speed FAA ${faa}%`, 700, 600);
+  ctx.font='400 15px "IBM Plex Sans", sans-serif'; ctx.fillText('Ngày cấp: '+new Date().toLocaleDateString('vi-VN'), 700, 760);
+
+  const link = document.getElementById('downloadLink');
+  link.href = document.getElementById('certCanvas').toDataURL('image/png'); link.classList.remove('hidden');
+}
+</script>
+</body>
+</html>
